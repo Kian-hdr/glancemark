@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.1/Glancemark_0.1.1_arm64.dmg"><img src="docs/assets/downloads/download-macos.svg" width="240" height="48" alt="Download for macOS, Apple Silicon"></a>
+  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.1/Glancemark_0.1.1_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
 </p>
 
 Glancemark 0.1.1 requires Apple Silicon and macOS 27 or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.1)
