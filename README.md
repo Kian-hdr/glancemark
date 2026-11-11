@@ -8,9 +8,17 @@
 
 ## Get Glancemark
 
-[![Build from source](docs/assets/downloads/build-from-source.svg)](#build-from-source)
+[![Download for macOS, Apple Silicon](docs/assets/downloads/download-macos.svg)](https://github.com/Kian-hdr/glancemark/releases/download/v0.1.0/Glancemark_0.1.0_arm64.dmg)
 
-Requires Apple Silicon and macOS 27 or later. The public installer and Homebrew cask are pending release verification.
+Requires Apple Silicon and macOS 27 or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.0)
+
+To install with [Homebrew](https://github.com/Kian-hdr/homebrew-glancemark):
+
+```sh
+brew install --cask Kian-hdr/glancemark/glancemark
+```
+
+[Build from source](#build-from-source)
 
 ## Read and edit Markdown
 
