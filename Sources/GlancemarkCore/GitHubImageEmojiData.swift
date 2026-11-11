@@ -1,0 +1,35 @@
+// GitHub REST GET /emojis, API version 2022-11-28, snapshot 2026-11-11.
+// Public metadata only. This registry does not include artwork.
+// Source: https://docs.github.com/en/rest/emojis/emojis#get-emojis
+// Input SHA-256: 5b6bf0e5f9b33f6bff29e9f40232863f9bb6dedbd80c46562f3338142613bc57
+// Regenerate by sorting GET /emojis by alias and retaining only direct
+// https://github.githubassets.com/images/icons/emoji/<file>.png?v<number> URLs.
+// Unicode emoji are excluded because their URLs use the /unicode/ subdirectory.
+
+enum GitHubImageEmojiData {
+    static let urls: [String: String] = [
+        "accessibility": "https://github.githubassets.com/images/icons/emoji/accessibility.png?v8",
+        "atom": "https://github.githubassets.com/images/icons/emoji/atom.png?v8",
+        "basecamp": "https://github.githubassets.com/images/icons/emoji/basecamp.png?v8",
+        "basecampy": "https://github.githubassets.com/images/icons/emoji/basecampy.png?v8",
+        "bowtie": "https://github.githubassets.com/images/icons/emoji/bowtie.png?v8",
+        "copilot": "https://github.githubassets.com/images/icons/emoji/copilot.png?v8",
+        "dependabot": "https://github.githubassets.com/images/icons/emoji/dependabot.png?v8",
+        "electron": "https://github.githubassets.com/images/icons/emoji/electron.png?v8",
+        "feelsgood": "https://github.githubassets.com/images/icons/emoji/feelsgood.png?v8",
+        "finnadie": "https://github.githubassets.com/images/icons/emoji/finnadie.png?v8",
+        "fishsticks": "https://github.githubassets.com/images/icons/emoji/fishsticks.png?v8",
+        "goberserk": "https://github.githubassets.com/images/icons/emoji/goberserk.png?v8",
+        "godmode": "https://github.githubassets.com/images/icons/emoji/godmode.png?v8",
+        "hurtrealbad": "https://github.githubassets.com/images/icons/emoji/hurtrealbad.png?v8",
+        "neckbeard": "https://github.githubassets.com/images/icons/emoji/neckbeard.png?v8",
+        "octocat": "https://github.githubassets.com/images/icons/emoji/octocat.png?v8",
+        "rage1": "https://github.githubassets.com/images/icons/emoji/rage1.png?v8",
+        "rage2": "https://github.githubassets.com/images/icons/emoji/rage2.png?v8",
+        "rage3": "https://github.githubassets.com/images/icons/emoji/rage3.png?v8",
+        "rage4": "https://github.githubassets.com/images/icons/emoji/rage4.png?v8",
+        "shipit": "https://github.githubassets.com/images/icons/emoji/shipit.png?v8",
+        "suspect": "https://github.githubassets.com/images/icons/emoji/suspect.png?v8",
+        "trollface": "https://github.githubassets.com/images/icons/emoji/trollface.png?v8",
+    ]
+}

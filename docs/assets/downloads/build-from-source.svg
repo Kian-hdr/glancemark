@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="232" height="48" viewBox="0 0 232 48" role="img" aria-label="Build from source">
+  <rect x="0" y="0" width="232" height="48" rx="10" fill="#352641"/>
+  <path d="m23 19-5 5 5 5m10-10 5 5-5 5m-3-13-4 16" fill="none" stroke="#f6ecdd" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="51" y="30" fill="#f6ecdd" font-family="system-ui,-apple-system,sans-serif" font-size="16" font-weight="650">Build from source</text>
+</svg>

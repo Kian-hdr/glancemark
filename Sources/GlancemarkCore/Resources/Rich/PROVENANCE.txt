@@ -1,0 +1,7 @@
+Mermaid.js: mermaid@12.3.0, package/dist/mermaid.min.js, unmodified.
+npm integrity: sha512-4113TdXeLAsMruJ79OpFL5O8+LTFXhQqZ260rF3tgUmiNAtRm4Uume04I+65PRN6yZ69J4f8rVYWW8zRk65UYw==
+Source: https://github.com/mermaid-js/mermaid/tree/2086904e76c692331e34a45d7cc3bc30860d040e
+MathJax.js: mathjax-full@3.2.2, package/es5/tex-svg-full.js, unmodified.
+npm integrity: sha512-+LfG9Fik+OuI8SLwsiR02IVdjcnRCy5MufYLi0C3TdMT56L/pjB0alMVGgoWJF8pN9Rc7FESycZB9BMNWIid5w==
+Source: https://github.com/mathjax/MathJax-src
+The upstream license files are included. See release/Notices/Renderer_Notices.txt for bundled notices.

@@ -1,0 +1,58 @@
+name: Glancemark
+options:
+  deploymentTarget:
+    macOS: "27.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    ARCHS: arm64
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: YES
+    GLANCEMARK_APPEARANCE_GROUP: ""
+  configs:
+    Release:
+      GLANCEMARK_APPEARANCE_GROUP: HZWY8HT54D.com.kiankonrad.glancemark
+packages:
+  GlancemarkCore:
+    path: .
+targets:
+  Glancemark:
+    type: application
+    platform: macOS
+    sources:
+      - App
+      - path: Design/Glancemark.icon
+        buildPhase: resources
+    dependencies:
+      - package: GlancemarkCore
+        product: GlancemarkCore
+      - target: GlancemarkQuickLook
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kiankonrad.glancemark
+        INFOPLIST_FILE: App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: Glancemark
+  GlancemarkQuickLook:
+    type: app-extension
+    platform: macOS
+    sources: [QuickLook]
+    dependencies:
+      - package: GlancemarkCore
+        product: GlancemarkCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kiankonrad.glancemark.quicklook
+        INFOPLIST_FILE: QuickLook/Info.plist
+        CODE_SIGN_ENTITLEMENTS: QuickLook/QuickLook.entitlements
+        APPLICATION_EXTENSION_API_ONLY: YES
+schemes:
+  Glancemark:
+    build:
+      targets:
+        Glancemark: all
+    run:
+      config: Debug
+    archive:
+      config: Release

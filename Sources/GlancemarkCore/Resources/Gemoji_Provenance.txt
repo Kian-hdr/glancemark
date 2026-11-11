@@ -1,0 +1,4 @@
+Emoji_Aliases.json is derived from the emoji and aliases fields of github/gemoji db/emoji.json.
+Upstream revision: 5476a66d2794e0d1551b1f96e449afc72e9f7bec (v4.1.0).
+Source: https://github.com/github/gemoji/tree/5476a66d2794e0d1551b1f96e449afc72e9f7bec
+The upstream MIT license is in Gemoji_LICENSE.txt. No artwork is included.

@@ -1,0 +1,6 @@
+# Preserve byte-identical vendor distributions.
+Sources/GlancemarkCore/Resources/Rich/Mermaid.js -text -diff
+Sources/GlancemarkCore/Resources/Rich/MathJax.js -text -diff
+Sources/GlancemarkCore/Resources/Rich/ui/safe.js -text -diff
+Sources/GlancemarkCore/Resources/Highlight/Highlight.min.js -text -diff
+Sources/GlancemarkCore/Resources/Highlight/Grammars.min.js -text -diff

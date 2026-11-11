@@ -1,0 +1,6 @@
+.build/
+.DS_Store
+DerivedData/
+Glancemark.xcodeproj/
+dist/
+node_modules/
