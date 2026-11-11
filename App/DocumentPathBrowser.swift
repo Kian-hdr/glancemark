@@ -6,6 +6,7 @@ struct DocumentPathBrowser: View {
     let open: (URL) -> Void
 
     @State private var folder: URL
+    @State private var requestedFolder: URL
     @State private var listing: Result<[DocumentNavigatorItem], Error>?
 
     init(root: URL, folder: URL, selected: URL?, open: @escaping (URL) -> Void) {
@@ -13,6 +14,7 @@ struct DocumentPathBrowser: View {
         self.selected = selected?.standardizedFileURL
         self.open = open
         _folder = State(initialValue: folder.standardizedFileURL)
+        _requestedFolder = State(initialValue: folder.standardizedFileURL)
     }
 
     var body: some View {
@@ -32,55 +34,66 @@ struct DocumentPathBrowser: View {
             .buttonStyle(.borderless)
             .padding(12)
             Divider()
-            switch listing {
-            case let .success(entries) where !entries.isEmpty:
-                List(entries) { item in
-                    let isCurrent = item.url.standardizedFileURL == selected
-                    Button {
-                        if item.isFolder { navigate(to: item.url) }
-                        else { open(item.url) }
-                    } label: {
-                        HStack {
-                            Label(item.name, systemImage: item.isFolder ? "folder" : "doc.text")
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            Spacer()
-                            if item.isFolder || isCurrent {
-                                Image(systemName: item.isFolder ? "chevron.right" : "checkmark")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
-                    .accessibilityHint(item.isFolder ? "Browse folder" : "Open Markdown document")
-                }
-                .listStyle(.plain)
-                .frame(height: min(CGFloat(entries.count) * 28 + 8, 300))
-            case .success:
-                Text("No folders or Markdown files").foregroundStyle(.secondary).padding(12)
-            case .failure:
-                Text("This folder couldn’t be opened.").foregroundStyle(.secondary).padding(12)
-            case nil:
-                ProgressView().controlSize(.small).padding(12)
-            }
+            folderContents
+                .frame(height: 180)
         }
         .frame(width: 290, alignment: .leading)
-        .task(id: folder) {
-            let directory = folder
+        .task(id: requestedFolder) {
+            let directory = requestedFolder
             let result = await Task.detached(priority: .userInitiated) {
                 Result { try DocumentNavigatorItem.contents(of: directory) }
             }.value
-            if !Task.isCancelled { listing = result }
+            guard !Task.isCancelled, directory == requestedFolder else { return }
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                folder = directory
+                listing = result
+            }
+        }
+    }
+
+    @ViewBuilder private var folderContents: some View {
+        switch listing {
+        case let .success(entries) where !entries.isEmpty:
+            List(entries) { item in
+                let isCurrent = item.url.standardizedFileURL == selected
+                Button {
+                    guard requestedFolder == folder else { return }
+                    if item.isFolder { navigate(to: item.url) }
+                    else { open(item.url) }
+                } label: {
+                    HStack {
+                        Label(item.name, systemImage: item.isFolder ? "folder" : "doc.text")
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer()
+                        if item.isFolder || isCurrent {
+                            Image(systemName: item.isFolder ? "chevron.right" : "checkmark")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isCurrent ? [.isSelected] : [])
+                .accessibilityHint(item.isFolder ? "Browse folder" : "Open Markdown document")
+            }
+            .listStyle(.plain)
+            .id(folder)
+        case .success:
+            Text("No folders or Markdown files").foregroundStyle(.secondary).padding(12)
+        case .failure:
+            Text("This folder couldn’t be opened.").foregroundStyle(.secondary).padding(12)
+        case nil:
+            ProgressView().controlSize(.small).padding(12)
         }
     }
 
     private func navigate(to url: URL) {
-        listing = nil
-        folder = url.standardizedFileURL
+        requestedFolder = url.standardizedFileURL
     }
 
     static func parentFolder(of folder: URL, within root: URL) -> URL? {
