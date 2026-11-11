@@ -1,4 +1,9 @@
-<h1 align="center">Glancemark</h1>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/README_Wordmark_Dark.svg">
+    <img src="docs/assets/README_Wordmark_Light.svg" width="194" height="42" alt="Glancemark">
+  </picture>
+</p>
 
 <p align="center">A native Markdown editor and Finder Quick Look preview for macOS.</p>
 
@@ -6,9 +11,9 @@
   <img src="docs/assets/Glancemark.png" width="96" alt="Glancemark icon">
 </p>
 
-## Get Glancemark
-
-[![Download for macOS, Apple Silicon](docs/assets/downloads/download-macos.svg)](https://github.com/Kian-hdr/glancemark/releases/download/v0.1.0/Glancemark_0.1.0_arm64.dmg)
+<p align="center">
+  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.0/Glancemark_0.1.0_arm64.dmg"><img src="docs/assets/downloads/download-macos.svg" width="240" height="48" alt="Download for macOS, Apple Silicon"></a>
+</p>
 
 Requires Apple Silicon and macOS 27 or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.0)
 
