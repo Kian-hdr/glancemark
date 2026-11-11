@@ -35,7 +35,7 @@ final class ReaderImageTests: XCTestCase {
         XCTAssertThrowsError(try ReaderRaster.decode(Data("<svg><script>evil()</script></svg>".utf8)))
     }
 
-    func testCenteredREADMEIconUsesSpecifiedHeight() throws {
+    func testCenteredREADMEIconUsesSpecifiedHeightAsMaximum() throws {
         let markup = "<p align=\"center\">\n<img height=\"256\" src=\"https://iina.io/img/icon.png\">\n</p>"
         let snapshot = MarkdownSource(text: markup).parse()
         let node = try XCTUnwrap(snapshot.document.child(at: 0))
@@ -43,6 +43,13 @@ final class ReaderImageTests: XCTestCase {
         XCTAssertTrue(image.centered)
         XCTAssertEqual(image.height, 256)
         XCTAssertEqual(image.source, "https://iina.io/img/icon.png")
+        XCTAssertEqual(image.displayWidth(intrinsicWidth: 128, intrinsicHeight: 128), 128)
+        XCTAssertEqual(image.displayWidth(intrinsicWidth: 800, intrinsicHeight: 400), 512)
+
+        var sized = image
+        sized.width = 300
+        XCTAssertEqual(sized.displayWidth(intrinsicWidth: 128, intrinsicHeight: 128), 256)
+        XCTAssertEqual(sized.displayWidth(intrinsicWidth: 128, intrinsicHeight: 64), 300)
     }
 
     func testSVGUsesSanitizedStaticMarkup() throws {

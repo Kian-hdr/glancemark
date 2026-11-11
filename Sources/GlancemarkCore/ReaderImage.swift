@@ -15,6 +15,13 @@ struct ReaderImage: Equatable {
     var centered = false
     var variants: [Theme: String] = [:]
 
+    func displayWidth(intrinsicWidth: Double, intrinsicHeight: Double) -> Double {
+        let requestedWidth = width ?? intrinsicWidth
+        // GitHub renders HTML image heights as a maximum with automatic height.
+        let heightLimitedWidth = height.map { intrinsicWidth * $0 / intrinsicHeight } ?? requestedWidth
+        return min(requestedWidth, heightLimitedWidth, 1_600)
+    }
+
     func source(for theme: Theme) -> String? {
         let selected = variants[theme] ?? source
         let fragment = URLComponents(string: selected)?.fragment
@@ -172,11 +179,11 @@ struct ReaderImageView: View {
 
     @ViewBuilder private func content(for location: URL?) -> some View {
         if let vector, rasterSource == location {
+            let width = image.displayWidth(intrinsicWidth: vector.size.width, intrinsicHeight: vector.size.height)
             Image(nsImage: vector)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(idealWidth: displayWidth(width: vector.size.width, height: vector.size.height),
-                       maxWidth: displayWidth(width: vector.size.width, height: vector.size.height))
+                .frame(idealWidth: width, maxWidth: width)
                 .accessibilityLabel(image.alt.isEmpty ? "Image" : image.alt)
         } else if case let .raster(raster)? = payload, rasterSource == location {
             if raster.frames.count > 1 && !reduceMotion {
@@ -194,16 +201,12 @@ struct ReaderImageView: View {
     }
 
     private func frame(_ bitmap: CGImage) -> some View {
-        Image(decorative: bitmap, scale: 1)
+        let width = image.displayWidth(intrinsicWidth: Double(bitmap.width), intrinsicHeight: Double(bitmap.height))
+        return Image(decorative: bitmap, scale: 1)
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(idealWidth: displayWidth(width: Double(bitmap.width), height: Double(bitmap.height)),
-                   maxWidth: displayWidth(width: Double(bitmap.width), height: Double(bitmap.height)))
+            .frame(idealWidth: width, maxWidth: width)
             .accessibilityLabel(image.alt.isEmpty ? "Image" : image.alt)
-    }
-
-    private func displayWidth(width: Double, height: Double) -> Double {
-        min(image.width ?? image.height.map { width * $0 / height } ?? width, 1_600)
     }
 
     private func imageURL(_ reference: String) -> URL? {

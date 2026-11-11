@@ -282,13 +282,15 @@ struct DocumentView: View {
         }
         let root = content.navigatorRoot
         let navigator = content.showNavigator
-        NSDocumentController.shared.openDocument(withContentsOf: destination, display: true) { doc, _, error in
+        NSDocumentController.shared.openDocument(withContentsOf: destination, display: false) { doc, _, error in
             if let error { NSApp.presentError(error); return }
             guard let doc = doc as? MarkdownDocument else { return }
             if let root { doc.content.navigatorRoot = root }
             if let breadcrumbRoot { doc.content.breadcrumbRoot = breadcrumbRoot }
             if navigator { doc.content.showNavigator = true }
             doc.content.fragment = fragment
+            if doc.windowControllers.isEmpty { doc.makeWindowControllers() }
+            doc.showWindows()
         }
     }
 }

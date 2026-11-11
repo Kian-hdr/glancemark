@@ -4,10 +4,12 @@ import AppKit
 enum GlancemarkApp {
     @MainActor static func main() {
         let app = NSApplication.shared
+        let delegate = GlancemarkAppDelegate()
+        app.delegate = delegate
         app.setActivationPolicy(.regular)
         _ = NSDocumentController.shared
         app.mainMenu = makeMenus()
-        app.run()
+        withExtendedLifetime(delegate) { app.run() }
     }
 
     @MainActor private static func makeMenus() -> NSMenu {
@@ -41,5 +43,11 @@ enum GlancemarkApp {
             menu.addItem(item)
         }
         return menu
+    }
+}
+
+private final class GlancemarkAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 }
