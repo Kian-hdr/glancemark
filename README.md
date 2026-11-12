@@ -8,7 +8,11 @@
 <p align="center">A native Markdown editor and Finder Quick Look preview for macOS.</p>
 
 <p align="center">
-  <img src="docs/assets/Glancemark.png" width="96" alt="Glancemark icon">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/App_Icon_Dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/App_Icon_Default.png">
+    <img src="docs/assets/App_Icon_Default.png" width="96" alt="Glancemark icon">
+  </picture>
 </p>
 
 <p align="center">
