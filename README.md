@@ -16,10 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.2/Glancemark_0.1.2_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
+  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.3/Glancemark_0.1.3_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
 </p>
 
-Glancemark 0.1.2 requires Apple Silicon and macOS 14 Sonoma or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.2)
+Glancemark 0.1.3 requires Apple Silicon and macOS 14 Sonoma or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.3)
 
 To install with [Homebrew](https://github.com/Kian-hdr/homebrew-glancemark):
 
@@ -33,7 +33,7 @@ brew install --cask Kian-hdr/glancemark/glancemark
 
 - Open Markdown files directly in the rendered editor. Select **Source** to see and edit the original Markdown.
 - Open related notes in tabs. Drag a tab out to open a separate window, or drag it back to rejoin.
-- Browse from the clickable path, or choose **Show in Finder** from the document menu. The path, formatting tools, and Source share one toolbar.
+- Click a folder in the path to browse that level, or choose **Show in Finder** from the document menu. The filename shows the current document. The path, formatting tools, and Source share one toolbar.
 - Open Glancemark once after installing it so macOS can register the bundled preview. Then select a Markdown file in Finder and press Space. Use the outline menu to jump between headings. You can keep your current default editor.
 - The reader supports GitHub-style tables, alerts, footnotes, disclosures, diagrams, math, maps, and models. Reading Appearance offers light, dark, and system themes with adjustable presets.
 - Local content and bundled diagram and math rendering work offline. Remote images load over HTTPS. Public GitHub video attachments load when you choose to play them.

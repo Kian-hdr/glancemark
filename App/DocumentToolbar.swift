@@ -23,7 +23,7 @@ struct DocumentToolbar: View {
         ViewThatFits(in: .horizontal) {
             toolbarRow(path, compact: false)
             toolbarRow(Array(path.suffix(2)), compact: false)
-            toolbarRow(Array(path.suffix(1)), compact: true)
+            toolbarRow(Array(path.suffix(2)), compact: true)
         }
         .buttonStyle(.borderless)
         .font(.callout)
@@ -38,7 +38,14 @@ struct DocumentToolbar: View {
                     if crumb != visiblePath.first {
                         Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                     }
-                    breadcrumb(crumb, isFile: crumb == file?.standardizedFileURL)
+                    if crumb == file?.standardizedFileURL {
+                        Label(crumb.lastPathComponent, systemImage: "doc.text")
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .fontWeight(.medium)
+                    } else {
+                        folderBreadcrumb(crumb)
+                    }
                 }
                 if visiblePath.isEmpty { Label("Untitled", systemImage: "doc.text").lineLimit(1) }
             }
@@ -81,18 +88,15 @@ struct DocumentToolbar: View {
         .accessibilityLabel("Document and folder options")
     }
 
-    private func breadcrumb(_ url: URL, isFile: Bool) -> some View {
-        let folder = isFile ? url.deletingLastPathComponent() : url
+    private func folderBreadcrumb(_ folder: URL) -> some View {
         let isPresented = Binding(
-            get: { openBreadcrumb == url },
-            set: { if !$0 && openBreadcrumb == url { openBreadcrumb = nil } }
+            get: { openBreadcrumb == folder },
+            set: { if !$0 && openBreadcrumb == folder { openBreadcrumb = nil } }
         )
-        return Button { openBreadcrumb = url } label: {
-            Label(url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent,
-                  systemImage: isFile ? "doc.text" : "folder")
+        return Button { openBreadcrumb = folder } label: {
+            Label(folder.lastPathComponent.isEmpty ? "/" : folder.lastPathComponent, systemImage: "folder")
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .fontWeight(isFile ? .medium : .regular)
         }
         .help("Browse \(folder.path)")
         .popover(isPresented: isPresented, arrowEdge: .bottom) {
