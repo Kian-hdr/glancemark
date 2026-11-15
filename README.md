@@ -45,11 +45,11 @@ brew install --cask Kian-hdr/glancemark/glancemark
 
 ![Finder Quick Look](docs/assets/screenshots/01_Finder_Quick_Look.jpg)
 
-![Navigation inside Quick Look](docs/assets/screenshots/02_Follow_Linked_Notes.jpg)
+![Mermaid diagram and equation in Finder Quick Look](docs/assets/screenshots/02_Quick_Look_Diagrams.jpg)
 
-![Tabbed Markdown editor](docs/assets/screenshots/03_Document_Tabs.jpg)
+![Field notes and a table in the tabbed Markdown editor](docs/assets/screenshots/03_Editor_Field_Notes.jpg)
 
-![Markdown source editor](docs/assets/screenshots/04_Markdown_Source.jpg)
+![Mermaid diagram and equation in the Markdown editor](docs/assets/screenshots/04_Editor_Diagrams.jpg)
 
 ## Build from source
 
