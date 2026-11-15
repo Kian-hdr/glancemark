@@ -10,12 +10,17 @@ public struct RepositoryLinks {
     let document: URL
     private let allowedFolder: URL
     public let repositoryRoot: URL?
+    public let wikiRoot: URL?
     let offersPreviewHandoff: Bool
 
-    public init(document: URL, allowedFolder: URL, repositoryRoot: URL? = nil, offersPreviewHandoff: Bool = false) {
-        self.document = document.resolvingSymlinksInPath().standardizedFileURL
+    public init(document: URL, allowedFolder: URL, repositoryRoot: URL? = nil, wikiRoot: URL? = nil,
+                offersPreviewHandoff: Bool = false) {
+        let document = document.resolvingSymlinksInPath().standardizedFileURL
+        self.document = document
         self.allowedFolder = allowedFolder.resolvingSymlinksInPath().standardizedFileURL
         self.offersPreviewHandoff = offersPreviewHandoff
+        let wikiRoot = wikiRoot?.resolvingSymlinksInPath().standardizedFileURL
+        self.wikiRoot = wikiRoot.flatMap { Self.contains(document, in: $0) ? $0 : nil }
         let root = repositoryRoot?.resolvingSymlinksInPath().standardizedFileURL
         if let root, Self.contains(self.document, in: root), Self.contains(root, in: self.allowedFolder) {
             self.repositoryRoot = root
@@ -30,6 +35,64 @@ public struct RepositoryLinks {
         guard document.isFileURL else { return nil }
         return findRoot(above: document.resolvingSymlinksInPath().standardizedFileURL,
                         within: URL(fileURLWithPath: "/", isDirectory: true))
+    }
+
+    public static func nearestWikiRoot(for document: URL) -> URL? {
+        guard document.isFileURL else { return nil }
+        let document = document.resolvingSymlinksInPath().standardizedFileURL
+        var folder = document.deletingLastPathComponent()
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        while folder.path != "/", folder != home {
+            if [".obsidian", "INDEX.md"].contains(where: {
+                FileManager.default.isReadableFile(atPath: folder.appendingPathComponent($0).path)
+            }) { return folder }
+            folder.deleteLastPathComponent()
+        }
+        return nil
+    }
+
+    func resolveWikiLink(_ link: WikiLink) -> Destination? {
+        resolveWikiReference(wikiReference(link))
+    }
+
+    public func resolveWikiReference(_ reference: String) -> Destination? {
+        guard let parts = URLComponents(string: reference), parts.scheme == nil, parts.host == nil,
+              parts.user == nil, parts.password == nil, !reference.hasPrefix("//") else { return nil }
+        let path = parts.path
+        let relative = resolve(reference)
+        if path.isEmpty || path.hasPrefix("./") || path.hasPrefix("../") { return relative }
+        let root = wikiRoot ?? repositoryRoot
+        let rooted = root.flatMap {
+            resolvePath(path.hasPrefix("/") ? String(path.dropFirst()) : path,
+                        relativeTo: $0, within: $0, fragment: parts.fragment)
+        }
+        let candidates = path.contains("/") ? [rooted, relative] : [relative, rooted]
+        for destination in candidates {
+            guard let destination else { continue }
+            if case let .local(url, fragment) = destination {
+                if url == document, let fragment { return .fragment(fragment) }
+                var directory: ObjCBool = false
+                if FileManager.default.fileExists(atPath: url.path, isDirectory: &directory),
+                   !directory.boolValue { return destination }
+            } else {
+                return destination
+            }
+        }
+        // Quick Look may be unable to probe a sibling file until the user opens it.
+        return candidates.compactMap { $0 }.first
+    }
+
+    func wikiReference(_ link: WikiLink) -> String {
+        var parts = URLComponents()
+        parts.path = wikiPath(link)
+        parts.fragment = link.fragment
+        return parts.string ?? ""
+    }
+
+    private func wikiPath(_ link: WikiLink) -> String {
+        var path = link.path
+        if !path.isEmpty, (path as NSString).pathExtension.isEmpty { path += ".md" }
+        return path
     }
 
     func unavailableLocalLink(_ reference: String) -> URL? {
@@ -66,6 +129,11 @@ public struct RepositoryLinks {
             base = document.deletingLastPathComponent()
             path = parts.path
         }
+        return resolvePath(path, relativeTo: base, within: allowedFolder, fragment: parts.fragment)
+    }
+
+    private func resolvePath(_ path: String, relativeTo base: URL, within boundary: URL,
+                             fragment: String?) -> Destination? {
         guard !path.contains("\0"), !path.contains("\\") else { return nil }
         var candidate = base
         for component in path.split(separator: "/") {
@@ -81,9 +149,9 @@ public struct RepositoryLinks {
                     candidate = target
                 }
             }
-            guard Self.contains(candidate, in: allowedFolder) else { return nil }
+            guard Self.contains(candidate, in: boundary) else { return nil }
         }
-        return .local(candidate, fragment: parts.fragment)
+        return .local(candidate, fragment: fragment)
     }
 
     private static func findRoot(above file: URL, within folder: URL) -> URL? {

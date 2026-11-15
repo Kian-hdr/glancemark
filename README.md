@@ -16,10 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.1/Glancemark_0.1.1_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
+  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.2/Glancemark_0.1.2_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
 </p>
 
-Glancemark 0.1.1 requires Apple Silicon and macOS 27 or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.1)
+Glancemark 0.1.2 requires Apple Silicon and macOS 14 Sonoma or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.2)
 
 To install with [Homebrew](https://github.com/Kian-hdr/homebrew-glancemark):
 
@@ -32,16 +32,28 @@ brew install --cask Kian-hdr/glancemark/glancemark
 ## Read and edit Markdown
 
 - Open Markdown files directly in the rendered editor. Select **Source** to see and edit the original Markdown.
-- Click a folder or the filename in the path bar to browse and open nearby Markdown files.
+- Open related notes in tabs. Drag a tab out to open a separate window, or drag it back to rejoin.
+- Browse from the clickable path, or choose **Show in Finder** from the document menu. The path, formatting tools, and Source share one toolbar.
 - Open Glancemark once after installing it so macOS can register the bundled preview. Then select a Markdown file in Finder and press Space. Use the outline menu to jump between headings. You can keep your current default editor.
 - The reader supports GitHub-style tables, alerts, footnotes, disclosures, diagrams, math, maps, and models. Reading Appearance offers light, dark, and system themes with adjustable presets.
 - Local content and bundled diagram and math rendering work offline. Remote images load over HTTPS. Public GitHub video attachments load when you choose to play them.
 - Finder sometimes restricts access to files beside a Markdown document. If an image shows its label in Quick Look, open the Markdown file in Glancemark and choose **Prepare Images for Finder** from the path bar’s **More** menu. Reopen Quick Look to load the prepared images.
-- If Quick Look can’t open a local link, close the preview and use **Open With → Glancemark** on the Markdown file in Finder. For a repository-root link, choose the repository folder in Glancemark if the document is nested or the folder has no Git metadata.
+- Follow local Markdown links in the same Quick Look window and use **Back** to return. If macOS asks for folder access, choose the folder containing the notes and the link continues automatically.
+- A curved arrow marks a local Markdown note. An outward arrow marks a website. Obsidian wikilinks work in prose and tables.
+
+## Screenshots
+
+![Finder Quick Look](docs/assets/screenshots/01_Finder_Quick_Look.jpg)
+
+![Navigation inside Quick Look](docs/assets/screenshots/02_Follow_Linked_Notes.jpg)
+
+![Tabbed Markdown editor](docs/assets/screenshots/03_Document_Tabs.jpg)
+
+![Markdown source editor](docs/assets/screenshots/04_Markdown_Source.jpg)
 
 ## Build from source
 
-Use an Apple Silicon Mac with macOS 27 or later, Xcode, and XcodeGen.
+Use an Apple Silicon Mac with macOS 14 Sonoma or later, Xcode, and XcodeGen.
 
 ```sh
 swift test

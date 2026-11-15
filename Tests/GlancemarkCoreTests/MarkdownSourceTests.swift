@@ -4,6 +4,20 @@ import XCTest
 @testable import GlancemarkCore
 
 final class MarkdownSourceTests: XCTestCase {
+    func testFrontmatterIsHiddenWithoutMovingBodySourceRanges() throws {
+        let preamble = "---\r\ntitle: Café\r\nstatus: proposed\r\n---\r\n\r\n"
+        let bytes = Data([0xEF, 0xBB, 0xBF] + Array((preamble + "# Actual title\r\n\r\n---\r\n").utf8))
+        let source = try MarkdownSource(bytes: bytes)
+        let snapshot = source.parse()
+        let nodes = Array(snapshot.document.children)
+        XCTAssertEqual(HeadingIndex(snapshot: snapshot).entries.map(\.title), ["Actual title"])
+        XCTAssertEqual(snapshot.byteRange(of: try XCTUnwrap(nodes.first))?.lowerBound, preamble.utf8.count)
+        XCTAssertEqual(nodes.count, 2)
+        XCTAssertTrue(nodes.last is ThematicBreak)
+        XCTAssertEqual(source.bytes, bytes)
+        XCTAssertTrue(MarkdownSource(text: "---\n\nOrdinary Markdown\n").parse().document.child(at: 0) is ThematicBreak)
+    }
+
     func testNoEditPreservesBOMWhitespaceAndCRLF() throws {
         let bytes = Data([0xEF, 0xBB, 0xBF] + Array("# Café  \r\n\r\n`x`\r\n".utf8))
         let source = try MarkdownSource(bytes: bytes)

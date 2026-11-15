@@ -1,17 +1,19 @@
 name: Glancemark
 options:
   deploymentTarget:
-    macOS: "27.0"
+    macOS: "14.0"
 settings:
   base:
     SWIFT_VERSION: "5.0"
     ARCHS: arm64
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.2"
+    CURRENT_PROJECT_VERSION: "40"
     ENABLE_HARDENED_RUNTIME: YES
     GLANCEMARK_APPEARANCE_GROUP: ""
+    GLANCEMARK_DEFAULT_START_AT_LOGIN: "NO"
   configs:
     Release:
+      GLANCEMARK_DEFAULT_START_AT_LOGIN: "YES"
       GLANCEMARK_APPEARANCE_GROUP: HZWY8HT54D.com.kiankonrad.glancemark
 packages:
   GlancemarkCore:

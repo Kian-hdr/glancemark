@@ -6,20 +6,24 @@ final class DocumentContent: ObservableObject {
     @Published var source = MarkdownSource(text: "")
     @Published var fileURL: URL? {
         didSet {
-            if fileURL != oldValue { repositoryRoot = fileURL.flatMap(RepositoryLinks.nearestRepositoryRoot(for:)) }
+            if fileURL != oldValue {
+                repositoryRoot = fileURL.flatMap(RepositoryLinks.nearestRepositoryRoot(for:))
+                wikiRoot = fileURL.flatMap(RepositoryLinks.nearestWikiRoot(for:))
+            }
         }
     }
     private(set) var repositoryRoot: URL?
+    @Published var wikiRoot: URL?
     @Published var fragment: String?
     @Published var navigatorRoot: URL?
     @Published var breadcrumbRoot: URL?
-    @Published var showNavigator = false
     @Published var hasExternalConflict = false
 }
 
 final class MarkdownDocument: NSDocument {
     let content = DocumentContent()
     private var baseline: Data?
+    private var hasPresentedWindow = false
     let editorUndo = UndoManager()
 
     override init() {
@@ -134,14 +138,81 @@ final class MarkdownDocument: NSDocument {
         }
     }
 
+    override func showWindows() {
+        let source = [NSApp.keyWindow, NSApp.mainWindow].compactMap { $0 }
+            .first(where: { $0 is MarkdownDocumentWindow })
+            ?? NSApp.orderedWindows.first(where: { $0 is MarkdownDocumentWindow && $0.isVisible })
+        showAsTab(beside: source)
+    }
+
+    func showAsTab(beside source: NSWindow?) {
+        if windowControllers.isEmpty { makeWindowControllers() }
+        if !hasPresentedWindow, let source, let window = windowControllers.first?.window,
+           source.isVisible, source != window, !window.isVisible, (window.tabbedWindows?.count ?? 0) < 2 {
+            source.addTabbedWindow(window, ordered: .above)
+        }
+        presentWindows()
+    }
+
+    func showInNewWindow() {
+        if windowControllers.isEmpty { makeWindowControllers() }
+        let window = windowControllers.first?.window
+        window?.tabbingMode = .disallowed
+        presentWindows()
+        window?.tabbingMode = .preferred
+    }
+
+    private func presentWindows() {
+        hasPresentedWindow = true
+        NSApp.setActivationPolicy(.regular)
+        super.showWindows()
+        (windowControllers.first?.window as? MarkdownDocumentWindow)?.keepTabBarVisible()
+    }
+
     override func makeWindowControllers() {
         let root = DocumentView(content: content, undo: editorUndo, reload: { [weak self] in self?.reloadDiskVersion() },
                                 saveCopy: { [weak self] in self?.saveConflictCopy() },
+                                documentWindow: { [weak self] in self?.windowControllers.first?.window },
                                 edit: { [weak self] in self?.applyEditorText($0) })
-        let window = NSWindow(contentViewController: NSHostingController(rootView: root))
+        let window = MarkdownDocumentWindow(contentViewController: NSHostingController(rootView: root))
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.tabbingIdentifier = "GlancemarkDocument"
+        window.tabbingMode = .preferred
         window.setContentSize(NSSize(width: 880, height: 680))
         window.center()
         addWindowController(NSWindowController(window: window))
+    }
+}
+
+private final class MarkdownDocumentWindow: NSWindow {
+    private weak var observedTabGroup: NSWindowTabGroup?
+    private var tabGroupObservation: NSKeyValueObservation?
+
+    override func becomeKey() {
+        super.becomeKey()
+        keepTabBarVisible()
+    }
+
+    func keepTabBarVisible() {
+        // AppKit can replace the tab group while a native drag finishes.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.tabbingMode != .disallowed, let group = self.tabGroup else { return }
+            if self.observedTabGroup !== group {
+                self.observedTabGroup = group
+                self.tabGroupObservation = group.observe(\.windows, options: [.new]) { [weak self] _, _ in
+                    DispatchQueue.main.async { self?.keepTabBarVisible() }
+                }
+            }
+            if self.isVisible, !group.isTabBarVisible { self.toggleTabBar(nil) }
+        }
+    }
+
+    override func newWindowForTab(_ sender: Any?) {
+        do {
+            let document = try NSDocumentController.shared.openUntitledDocumentAndDisplay(false)
+            (document as? MarkdownDocument)?.showAsTab(beside: self)
+        } catch {
+            NSApp.presentError(error)
+        }
     }
 }

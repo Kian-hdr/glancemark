@@ -1,4 +1,5 @@
 import AppKit
+import CoreServices
 
 @main
 enum GlancemarkApp {
@@ -6,7 +7,7 @@ enum GlancemarkApp {
         let app = NSApplication.shared
         let delegate = GlancemarkAppDelegate()
         app.delegate = delegate
-        app.setActivationPolicy(.regular)
+        NSWindow.allowsAutomaticWindowTabbing = true
         _ = NSDocumentController.shared
         app.mainMenu = makeMenus()
         withExtendedLifetime(delegate) { app.run() }
@@ -22,7 +23,9 @@ enum GlancemarkApp {
         application.addItem(.separator())
         application.addItem(withTitle: "Quit Glancemark", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let file = NSMenu(title: "File")
-        file.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
+        file.addItem(withTitle: "New Tab", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "t")
+        let newWindow = file.addItem(withTitle: "New Window", action: #selector(GlancemarkAppDelegate.newWindow(_:)), keyEquivalent: "n")
+        newWindow.target = NSApp.delegate
         file.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
         file.addItem(withTitle: "Save", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
         file.addItem(withTitle: "Save As…", action: #selector(NSDocument.saveAs(_:)), keyEquivalent: "S")
@@ -36,6 +39,9 @@ enum GlancemarkApp {
         }
         let window = NSMenu(title: "Window")
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        window.addItem(.separator())
+        window.addItem(withTitle: "Move Tab to New Window", action: #selector(NSWindow.moveTabToNewWindow(_:)), keyEquivalent: "")
+        window.addItem(withTitle: "Merge All Windows", action: #selector(NSWindow.mergeAllWindows(_:)), keyEquivalent: "")
         NSApp.windowsMenu = window
         for submenu in [application, file, edit, window] {
             let item = NSMenuItem()
@@ -47,7 +53,40 @@ enum GlancemarkApp {
 }
 
 private final class GlancemarkAppDelegate: NSObject, NSApplicationDelegate {
+    @objc func newWindow(_ sender: Any?) {
+        do {
+            let document = try NSDocumentController.shared.openUntitledDocumentAndDisplay(false)
+            (document as? MarkdownDocument)?.showInNewWindow()
+        } catch {
+            NSApp.presentError(error)
+        }
+    }
+
+    private var isLoginEvent: Bool {
+        guard let event = NSAppleEventManager.shared().currentAppleEvent else { return false }
+        return event.eventID == AEEventID(kAEOpenApplication)
+            && event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue
+                == AEKeyword(keyAELaunchedAsLogInItem)
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        LoginSettings.shared.configureDefault()
+    }
+
+    func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        !isLoginEvent
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows {
+            NSDocumentController.shared.newDocument(nil)
+        }
+        return false
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        guard LoginSettings.shared.isEnabled else { return true }
+        sender.setActivationPolicy(.accessory)
+        return false
     }
 }

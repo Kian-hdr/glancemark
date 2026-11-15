@@ -18,6 +18,15 @@ final class ReadingAppearanceTests: XCTestCase {
         XCTAssertTrue(appearance.allowsHostMaterial(in: .dark, reduceTransparency: false))
     }
 
+    func testLegacyAppearanceDecodesWithoutEnablingSolidQuickLook() throws {
+        let legacy = Data(#"{"theme":"Dark","presets":[{"id":"0B0F882C-AB7E-4602-897E-2C319C4AE2AE","name":"Legacy","textSize":18,"width":680,"surface":"Paper"}],"selected":"0B0F882C-AB7E-4602-897E-2C319C4AE2AE"}"#.utf8)
+        let appearance = try JSONDecoder().decode(ReadingAppearance.self, from: legacy)
+        XCTAssertFalse(appearance.solidQuickLookBackground)
+        XCTAssertEqual(appearance.theme, .dark)
+        XCTAssertEqual(appearance.preset.name, "Legacy")
+        XCTAssertEqual(appearance.preset.surface, .paper)
+    }
+
     @MainActor
     func testTwoStoresShareAnAtomicPresetFile() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -26,7 +35,9 @@ final class ReadingAppearanceTests: XCTestCase {
         let file = directory.appendingPathComponent("ReadingAppearance.json")
         let app = ReadingAppearanceStore(file: file, useSignedGroup: false)
         let finder = ReadingAppearanceStore(file: file, useSignedGroup: false)
+        XCTAssertFalse(finder.value.solidQuickLookBackground)
         try app.update {
+            $0.solidQuickLookBackground = true
             $0.theme = .dark
             let preset = ReadingAppearance.Preset(name: "Wide", textSize: 21, width: 1_500, surface: .paper)
             $0.presets.append(preset)
@@ -38,6 +49,12 @@ final class ReadingAppearanceTests: XCTestCase {
         XCTAssertEqual(finder.value.preset.textSize, 21)
         XCTAssertEqual(finder.value.preset.width, 1_200)
         XCTAssertEqual(finder.value.preset.surface, .paper)
+        XCTAssertTrue(finder.value.solidQuickLookBackground)
         XCTAssertEqual(finder.value, app.value)
+
+        try app.update { $0.solidQuickLookBackground = false }
+        finder.reload()
+        XCTAssertFalse(finder.value.solidQuickLookBackground)
+        XCTAssertEqual(finder.value.preset.name, "Wide")
     }
 }

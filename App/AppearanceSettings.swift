@@ -25,6 +25,7 @@ final class AppearanceSettingsController: NSObject {
 
 private struct AppearanceSettingsView: View {
     @ObservedObject var store = ReadingAppearanceStore.shared
+    @ObservedObject private var login = LoginSettings.shared
     @State private var saveError: String?
 
     var body: some View {
@@ -69,10 +70,40 @@ private struct AppearanceSettingsView: View {
             Picker("Background", selection: presetBinding(\.surface)) {
                 ForEach(ReadingAppearance.Surface.allCases) { Text($0.rawValue).tag($0) }
             }
+            Section("Finder Quick Look") {
+                Toggle("Solid gray background", isOn: Binding(
+                    get: { store.value.solidQuickLookBackground },
+                    set: { enabled in change { $0.solidQuickLookBackground = enabled } }
+                ))
+                Text("Use an opaque background when you reopen a Markdown preview.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Startup") {
+                Toggle("Start at login", isOn: Binding(
+                    get: { login.isEnabled },
+                    set: { login.setEnabled($0) }
+                ))
+                Text("Start Glancemark in the background without a window or Dock icon.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if login.requiresApproval {
+                    Button("Open Login Items in System Settings") { login.openSystemSettings() }
+                }
+                if let error = login.errorMessage {
+                    Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.secondary)
+                }
+            }
             if let saveError {
                 Label(saveError, systemImage: "exclamationmark.triangle").foregroundStyle(.secondary)
             }
-        }.padding(22).frame(width: 460)
+        }
+        .padding(22)
+        .frame(width: 460)
+        .onAppear { login.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            login.refresh()
+        }
     }
 
     private func presetBinding<Value>(_ key: WritableKeyPath<ReadingAppearance.Preset, Value>) -> Binding<Value> {

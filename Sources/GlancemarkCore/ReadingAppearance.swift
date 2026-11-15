@@ -40,8 +40,21 @@ public struct ReadingAppearance: Codable, Equatable {
         Preset(name: "Compact", textSize: 13, width: 640)
     ]
     public var selected: UUID?
+    public var solidQuickLookBackground = false
 
     public init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case theme, presets, selected, solidQuickLookBackground
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        theme = try values.decode(Theme.self, forKey: .theme)
+        presets = try values.decode([Preset].self, forKey: .presets)
+        selected = try values.decodeIfPresent(UUID.self, forKey: .selected)
+        solidQuickLookBackground = try values.decodeIfPresent(Bool.self, forKey: .solidQuickLookBackground) ?? false
+    }
 
     public var preset: Preset {
         presets.first { $0.id == selected } ?? presets.first ?? Preset(name: "Standard")

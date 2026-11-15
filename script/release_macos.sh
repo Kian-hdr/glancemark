@@ -55,14 +55,14 @@ check_app() {
     file="$bundle/Contents/Info.plist"
     value "$file" CFBundleShortVersionString "$version"
     value "$file" CFBundleVersion "$build"
-    value "$file" LSMinimumSystemVersion 27.0
+    value "$file" LSMinimumSystemVersion 14.0
     local actual expected binary
     binary="$bundle/Contents/MacOS/$(plist "$file" CFBundleExecutable)"
     # Use the stock macOS utility so a clean VM does not need Xcode or Command Line Tools.
     actual=$(LC_ALL=C /usr/bin/file -b "$binary" | /usr/bin/awk '/Mach-O 64-bit executable/ && ($NF == "arm64" || $NF == "x86_64") { print $NF }' | LC_ALL=C sort -u | paste -sd ' ' -)
     expected=$(printf '%s\n' "$archs" | tr ' ' '\n' | LC_ALL=C sort | paste -sd ' ' -)
     [[ "$actual" == "$expected" ]] || die "Unexpected architecture in $binary: $actual"
-    printf '%s %s (%s), macOS 27.0+, %s\n' "$(plist "$file" CFBundleIdentifier)" "$version" "$build" "$actual"
+    printf '%s %s (%s), macOS 14.0+, %s\n' "$(plist "$file" CFBundleIdentifier)" "$version" "$build" "$actual"
   done
 }
 
@@ -363,7 +363,7 @@ PYTHON
         printf '  url "https://github.com/%s/glancemark/releases/download/v#{version}/Glancemark_#{version}_%s.dmg"\n' "$owner" "$arch"
         printf '  name "Glancemark"\n  desc "Markdown editor and Finder Quick Look preview"\n  homepage "https://github.com/%s/glancemark"\n\n' "$owner"
         printf '  depends_on arch: :arm64\n'
-        printf '  depends_on macos: :golden_gate\n\n  app "Glancemark.app"\nend\n'
+        printf '  depends_on macos: :sonoma\n\n  app "Glancemark.app"\nend\n'
       } > "$4"
     )
     if [[ $1 == cask ]]; then

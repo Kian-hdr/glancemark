@@ -64,8 +64,15 @@ public struct MarkdownSnapshot {
             }
         }
         lineStarts = starts
-        let original = Document(parsing: text)
-        if text.contains("[^") {
+        var renderedSource = Self.maskFrontmatter(in: bytes, lineStarts: starts) ?? text
+        var original = Document(parsing: renderedSource)
+        if renderedSource.contains("[["),
+           let protected = WikiLink.protectTableAliases(in: renderedSource, document: original, lineStarts: starts) {
+            // The single-byte placeholder preserves the source ranges used by the editor.
+            renderedSource = protected
+            original = Document(parsing: renderedSource)
+        }
+        if renderedSource.contains("[^") {
             var excluded: [Range<Int>] = []
             func visit(_ node: any Markup) {
                 if node is CodeBlock || node is HTMLBlock, let range = node.range,
@@ -78,13 +85,46 @@ public struct MarkdownSnapshot {
                 }
             }
             visit(original)
-            let (masked, definitions) = Footnotes.extract(from: text, excluding: excluded)
+            let (masked, definitions) = Footnotes.extract(from: renderedSource, excluding: excluded)
             footnoteDefinitions = definitions
             document = definitions.isEmpty ? original : Document(parsing: masked)
         } else {
             footnoteDefinitions = []
             document = original
         }
+    }
+
+    private static func maskFrontmatter(in bytes: Data, lineStarts: [Int]) -> String? {
+        guard lineStarts.count >= 3 else { return nil }
+        func line(_ index: Int) -> String {
+            let end = index + 1 < lineStarts.count ? lineStarts[index + 1] : bytes.count
+            return String(decoding: bytes[lineStarts[index]..<end], as: UTF8.self)
+                .trimmingCharacters(in: .newlines)
+        }
+        guard line(0) == "---" else { return nil }
+        var beginsWithProperty = false
+        for index in 1..<lineStarts.count {
+            let value = line(index)
+            if value == "---" || value == "..." {
+                guard beginsWithProperty else { return nil }
+                let end = index + 1 < lineStarts.count ? lineStarts[index + 1] : bytes.count
+                var masked = bytes
+                // Keep line and byte positions intact for headings and inline edits.
+                for offset in 0..<end where masked[offset] != 10 && masked[offset] != 13 {
+                    masked[offset] = 32
+                }
+                return String(decoding: masked, as: UTF8.self)
+            }
+            if !beginsWithProperty {
+                let trimmed = value.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+                guard value.prefixMatch(of: #/[\p{L}\p{N}_][\p{L}\p{N}_ -]*:(?:[ \t]|$)/#) != nil else {
+                    return nil
+                }
+                beginsWithProperty = true
+            }
+        }
+        return nil
     }
 
     public func byteRange(of node: any Markup) -> Range<Int>? {

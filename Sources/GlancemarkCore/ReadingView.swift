@@ -7,6 +7,7 @@ public struct ReadingView: View {
     @Environment(\.colorScheme) private var hostScheme
     @Environment(\.isFinderPreview) private var inheritedFinderPreview
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.onPreviewMarkdownLink) private var onPreviewMarkdownLink
     private let snapshot: MarkdownSnapshot
     private let footnotes: Footnotes
     private let headings: [Range<Int>: String]
@@ -99,6 +100,10 @@ public struct ReadingView: View {
             .environment(\.isFinderPreview, useHostSurface || inheritedFinderPreview)
             .textSelection(.enabled)
             .environment(\.openURL, OpenURLAction { url in
+                if url.scheme == PreviewMarkdownLink.scheme {
+                    if let link = PreviewMarkdownLink(url: url) { onPreviewMarkdownLink?(link) }
+                    return .handled
+                }
                 if url.scheme == "glancemark-unavailable-local" {
                     onUnavailableLocal?()
                     return .handled
@@ -144,11 +149,14 @@ public struct ReadingView: View {
 
     private var surface: AnyShapeStyle {
         let settings = appearance.value
+        let scheme = settings.theme.colorScheme ?? hostScheme
+        if (useHostSurface || inheritedFinderPreview) && settings.solidQuickLookBackground {
+            return AnyShapeStyle(scheme == .dark ? Color(white: 0.20) : Color(white: 0.93))
+        }
         let materialAllowed = settings.allowsHostMaterial(in: hostScheme, reduceTransparency: reduceTransparency)
         if useHostSurface && materialAllowed && settings.preset.surface != .paper {
             return AnyShapeStyle(Color.clear)
         }
-        let scheme = settings.theme.colorScheme ?? hostScheme
         switch settings.preset.surface {
         case .paper:
             return AnyShapeStyle(scheme == .dark ? Color(white: 0.12) : Color(white: 0.98))
@@ -331,7 +339,7 @@ public struct ReadingView: View {
             }
             if paragraph.childCount == 1, let link = paragraph.child(at: 0) as? Markdown.Link,
                let url = link.destination.flatMap(destination) {
-                return AnyView(SwiftUI.Link(destination: url) { SwiftUI.Text(inlines(link)) })
+                return AnyView(linkableText(linkedText(inlines(link), url: url, reference: link.destination)))
             }
             if let parts = imageFragments(paragraph) {
                 return AnyView(InlineMathLayout {
@@ -346,7 +354,7 @@ public struct ReadingView: View {
             if let raw = snapshot.source(of: paragraph), let image = SafeHTML.image(raw) {
                 return AnyView(imageView(image))
             }
-            return AnyView(SwiftUI.Text(inlines(paragraph)))
+            return AnyView(linkableText(inlines(paragraph)))
         case let quote as BlockQuote:
             if let first = quote.children.first(where: { _ in true }) as? Paragraph,
                let firstInline = first.children.first(where: { _ in true }) as? Markdown.Text,
@@ -363,7 +371,7 @@ public struct ReadingView: View {
         case let list as UnorderedList:
             return AnyView(listView(Array(list.children), start: nil))
         case let table as Markdown.Table:
-            return AnyView(tableView(table))
+            return AnyView(ReaderTable(table: table) { linkableText(inlines($0)) })
         case let code as CodeBlock:
             guard !code.code.allSatisfy(\.isWhitespace) else { return AnyView(EmptyView()) }
             let fallback = snapshot.source(of: code) ?? code.code
@@ -516,20 +524,22 @@ public struct ReadingView: View {
         if let text = node as? Markdown.Text {
             let source = text.string
             let references = footnotes.inText(text, snapshot: snapshot)
+            let wikiLinks = WikiLink.matches(in: text, snapshot: snapshot)
             let emoji = GitHubImageEmoji.matches(in: source).filter { match in
                 !references.contains { $0.range.overlaps(match.range) }
+                    && !wikiLinks.contains { $0.range.overlaps(match.range) }
             }
             guard !emoji.isEmpty else { return nil }
             var result: [ImageFragment] = []
             var start = source.startIndex
             for match in emoji {
                 if start < match.range.lowerBound {
-                    result.append(.text(footnoteText(text, in: start..<match.range.lowerBound)))
+                    result.append(.text(inlineText(text, in: start..<match.range.lowerBound)))
                 }
                 result.append(.image(match.image))
                 start = match.range.upperBound
             }
-            if start < source.endIndex { result.append(.text(footnoteText(text, in: start..<source.endIndex))) }
+            if start < source.endIndex { result.append(.text(inlineText(text, in: start..<source.endIndex))) }
             return result
         }
 
@@ -626,21 +636,38 @@ public struct ReadingView: View {
         }
     }
 
-    private func footnoteText(_ text: Markdown.Text, in selection: Range<String.Index>? = nil) -> AttributedString {
+    private func inlineText(_ text: Markdown.Text, in selection: Range<String.Index>? = nil) -> AttributedString {
         let source = text.string
         let range = selection ?? source.startIndex..<source.endIndex
         var result = AttributedString()
         var start = range.lowerBound
-        for reference in footnotes.inText(text, snapshot: snapshot)
-            where reference.range.lowerBound >= range.lowerBound && reference.range.upperBound <= range.upperBound {
-            result += AttributedString(EmojiShortcodes.replace(in: source[start..<reference.range.lowerBound]))
+        var replacements: [(Range<String.Index>, AttributedString)] = []
+        for reference in footnotes.inText(text, snapshot: snapshot) {
             var marker = AttributedString(String(reference.number))
             marker.font = .caption
             marker.link = noteURL(reference.noteID)
-            result += marker
-            start = reference.range.upperBound
+            replacements.append((reference.range, marker))
         }
-        result += AttributedString(EmojiShortcodes.replace(in: source[start..<range.upperBound]))
+        for wiki in WikiLink.matches(in: text, snapshot: snapshot) {
+            var label = AttributedString(wiki.label)
+            if let links {
+                let reference = links.wikiReference(wiki)
+                let url = resolvedLink(wiki: true, reference: reference, destination: links.resolveWikiLink(wiki))
+                label = linkedText(label, url: url, reference: reference)
+            } else if wiki.path.isEmpty, let fragment = wiki.fragment {
+                label.link = destinationURL(.fragment(fragment))
+            }
+            replacements.append((wiki.range, label))
+        }
+        for (span, replacement) in replacements.sorted(by: { $0.0.lowerBound < $1.0.lowerBound })
+            where span.lowerBound >= start && span.upperBound <= range.upperBound {
+            let plain = WikiLink.restoreTablePipes(in: source[start..<span.lowerBound])
+            result += AttributedString(EmojiShortcodes.replace(in: plain))
+            result += replacement
+            start = span.upperBound
+        }
+        let tail = WikiLink.restoreTablePipes(in: source[start..<range.upperBound])
+        result += AttributedString(EmojiShortcodes.replace(in: tail))
         return result
     }
 
@@ -687,41 +714,21 @@ public struct ReadingView: View {
         }.padding(.leading, 8)
     }
 
-    private func tableView(_ table: Markdown.Table) -> some View {
-        let rows = [Array(table.head.children)] + table.body.children.map { Array($0.children) }
-        let alignment = table.columnAlignments
-        let border = Color.primary.opacity(0.16)
-        let outline = RoundedRectangle(cornerRadius: 7, style: .continuous)
-        return ScrollView(.horizontal) {
-            Grid(horizontalSpacing: 0, verticalSpacing: 0) {
-                ForEach(rows.indices, id: \.self) { row in
-                    GridRow {
-                        ForEach(rows[row].indices, id: \.self) { column in
-                            let position = column < alignment.count ? alignment[column] : nil
-                            let cellAlignment: Alignment = position == .right ? .trailing
-                                : position == .center ? .center : .leading
-                            SwiftUI.Text(inlines(rows[row][column]))
-                                .fontWeight(row == 0 ? .semibold : .regular)
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 10)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: cellAlignment)
-                                .overlay(alignment: .trailing) {
-                                    if column < rows[row].count - 1 {
-                                        Rectangle().fill(border).frame(width: 1)
-                                    }
-                                }
-                        }
-                    }
-                    .background(row == 0 ? Color.primary.opacity(0.055) : Color.clear)
-                    if row < rows.count - 1 {
-                        Rectangle().fill(border).frame(height: 1)
-                            .gridCellUnsizedAxes(.horizontal)
-                    }
-                }
+    @ViewBuilder
+    private func linkableText(_ content: AttributedString) -> some View {
+        if let url = content.runs.first?.link, content.runs.allSatisfy({ $0.link == url }) {
+            // A native Link exposes a press action for a whole cell or line.
+            var label = content
+            let _ = label.link = nil
+            if let kind = ReaderLinkKind(url: url) {
+                SwiftUI.Link(destination: url) { SwiftUI.Text(label) }
+                    .help(kind.action)
+                    .accessibilityHint(SwiftUI.Text(kind.action))
+            } else {
+                SwiftUI.Link(destination: url) { SwiftUI.Text(label) }
             }
-            .fixedSize(horizontal: true, vertical: false)
-            .clipShape(outline)
-            .overlay { outline.strokeBorder(border, lineWidth: 1).allowsHitTesting(false) }
+        } else {
+            SwiftUI.Text(content)
         }
     }
 
@@ -735,7 +742,7 @@ public struct ReadingView: View {
         for child in children {
             var content: AttributedString
             switch child {
-            case let text as Markdown.Text: content = footnoteText(text)
+            case let text as Markdown.Text: content = inlineText(text)
             case let code as InlineCode:
                 content = AttributedString(code.code)
                 content.font = .system(.body, design: .monospaced)
@@ -766,8 +773,7 @@ public struct ReadingView: View {
                 content = inlines(child)
                 content.inlinePresentationIntent = [.strikethrough]
             case let link as Markdown.Link:
-                content = inlines(link)
-                content.link = link.destination.flatMap(destination)
+                content = linkedText(inlines(link), url: link.destination.flatMap(destination), reference: link.destination)
             case let image as Markdown.Image:
                 content = AttributedString(image.plainText)
                 content.link = image.source.flatMap(destination)
@@ -794,9 +800,30 @@ public struct ReadingView: View {
         return result
     }
 
+    private func linkedText(_ label: AttributedString, url: URL?, reference: String?) -> AttributedString {
+        guard let url else { return label }
+        var label = label
+        if let kind = ReaderLinkKind(url: url, reference: reference) {
+            label += AttributedString("\u{00A0}" + kind.marker)
+        }
+        label.link = url
+        return label
+    }
+
     private func destination(_ reference: String) -> URL? {
         guard let links else { return nil }
-        guard let resolved = links.resolve(reference) else { return links.unavailableLocalLink(reference) }
+        return resolvedLink(wiki: false, reference: reference, destination: links.resolve(reference))
+    }
+
+    private func resolvedLink(wiki: Bool, reference: String, destination: RepositoryLinks.Destination?) -> URL? {
+        if case .fragment? = destination { return destination.flatMap(destinationURL) }
+        if onPreviewMarkdownLink != nil, let link = PreviewMarkdownLink(reference: reference, isWiki: wiki) {
+            return link.url
+        }
+        return destination.flatMap(destinationURL) ?? links?.unavailableLocalLink(reference)
+    }
+
+    private func destinationURL(_ resolved: RepositoryLinks.Destination) -> URL? {
         switch resolved {
         case let .web(url): return url
         case let .local(url, fragment):
@@ -812,6 +839,34 @@ public struct ReadingView: View {
     }
 }
 
+private enum ReaderLinkKind {
+    case markdown, website
+
+    init?(url: URL, reference: String? = nil) {
+        switch url.scheme?.lowercased() {
+        case "http", "https":
+            self = .website
+        case "file" where Self.isMarkdownPath(url.path):
+            self = .markdown
+        case PreviewMarkdownLink.scheme:
+            self = .markdown
+        case "glancemark-unavailable-local":
+            guard let reference, let path = URLComponents(string: reference)?.path,
+                  Self.isMarkdownPath(path) else { return nil }
+            self = .markdown
+        default:
+            return nil
+        }
+    }
+
+    private static func isMarkdownPath(_ path: String) -> Bool {
+        ["md", "markdown"].contains((path as NSString).pathExtension.lowercased())
+    }
+
+    var marker: String { self == .markdown ? "↪" : "↗" }
+    var action: String { self == .markdown ? "Open Markdown note" : "Open website" }
+}
+
 
 private struct ReaderDisclosure<Content: View, Label: View>: View {
     @State var isOpen: Bool
@@ -820,162 +875,5 @@ private struct ReaderDisclosure<Content: View, Label: View>: View {
 
     var body: some View {
         DisclosureGroup(isExpanded: $isOpen, content: content, label: label)
-    }
-}
-
-
-struct ReadingBlockGroup {
-    enum Content {
-        case disclosure(SafeHTML.Disclosure)
-        case container(SafeHTML.Container)
-        case markdownContainer(SafeHTML.MarkdownContainer)
-        case node(any Markup)
-    }
-
-    let content: Content
-    let range: Range<Int>?
-
-    static func previews(_ groups: [Self], in active: Range<Int>, snapshot: MarkdownSnapshot) -> [Self] {
-        guard !active.isEmpty else { return [] }
-        return groups.filter { group in
-            guard let range = group.range, active.lowerBound <= range.lowerBound,
-                  range.upperBound <= active.upperBound else { return false }
-            switch group.content {
-            case .disclosure, .container, .markdownContainer:
-                return true
-            case let .node(node):
-                if node is Markdown.Table { return true }
-                if let code = node as? CodeBlock {
-                    return ["mermaid", "math", "geojson", "topojson", "stl"].contains(code.language?.lowercased() ?? "")
-                }
-                if let raw = snapshot.source(of: node) {
-                    if let paragraph = node as? Paragraph {
-                        if paragraph.childCount == 1, let link = paragraph.child(at: 0) as? Markdown.Link,
-                           let address = link.destination, GitHubVideo.attachment(address) != nil { return true }
-                        return GitHubMath.display(raw) != nil || GitHubMath.inline(raw) != nil
-                            || GitHubVideo.attachment(raw.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
-                            || GitHubVideo.fromHTML(raw) != nil || SafeHTML.image(raw) != nil
-                            || containsImage(node)
-                    }
-                    if node is HTMLBlock {
-                        return SafeHTML.image(raw) != nil || SafeHTML.headingImage(raw) != nil || GitHubVideo.fromHTML(raw) != nil
-                    }
-                }
-                return false
-            }
-        }
-    }
-
-    private static func containsImage(_ node: any Markup) -> Bool {
-        node is Markdown.Image || node.children.contains(where: containsImage)
-    }
-
-    static func collect(_ nodes: [any Markup], in snapshot: MarkdownSnapshot) -> [Self] {
-        var groups: [Self] = []
-        var index = 0
-        while index < nodes.count {
-            let content: Content
-            let consumed: Int
-            if let disclosure = SafeHTML.disclosure(at: index, in: nodes, snapshot: snapshot) {
-                content = .disclosure(disclosure)
-                consumed = disclosure.consumed
-            } else if let container = SafeHTML.container(at: index, in: nodes, snapshot: snapshot) {
-                content = .container(container)
-                consumed = container.consumed
-            } else if let container = SafeHTML.markdownContainer(at: index, in: nodes, snapshot: snapshot) {
-                content = .markdownContainer(container)
-                consumed = container.consumed
-            } else if nodes[index] is HTMLBlock, let raw = snapshot.source(of: nodes[index]),
-                      SafeHTML.image(raw) == nil, SafeHTML.textBlock(raw) == nil, SafeHTML.headingImage(raw) == nil,
-                      let items = SafeHTML.paragraphFragment(raw) {
-                content = .container(SafeHTML.Container(items: items, consumed: 1))
-                consumed = 1
-            } else {
-                content = .node(nodes[index])
-                consumed = 1
-            }
-            let last = index + consumed - 1
-            let range: Range<Int>?
-            if let first = snapshot.byteRange(of: nodes[index]), let end = snapshot.byteRange(of: nodes[last]),
-               first.lowerBound <= end.upperBound {
-                range = first.lowerBound..<end.upperBound
-            } else {
-                range = nil
-            }
-            groups.append(Self(content: content, range: range))
-            index += consumed
-        }
-        return groups
-    }
-}
-
-struct EditableReadingLayout {
-    enum Side: Hashable { case before, after }
-
-    enum Item: Equatable, Identifiable {
-        case block(Int)
-        case fragment(Int, Side, Range<Int>)
-        case footnotes
-        case editor
-
-        enum ID: Hashable {
-            case block(Int)
-            case fragment(Int, Side)
-            case footnotes
-            case editor
-        }
-
-        var id: ID {
-            switch self {
-            case let .block(index): return .block(index)
-            case let .fragment(index, side, _): return .fragment(index, side)
-            case .footnotes: return .footnotes
-            case .editor: return .editor
-            }
-        }
-    }
-
-    let items: [Item]
-    let showsTail: Bool
-
-    init(ranges: [Range<Int>?], active: Range<Int>?, byteCount: Int) {
-        guard let active, active.lowerBound >= 0, active.upperBound <= byteCount else {
-            items = ranges.indices.map(Item.block) + [.footnotes]
-            showsTail = true
-            return
-        }
-
-        var result: [Item] = []
-        var inserted = false
-        for (index, range) in ranges.enumerated() {
-            guard let range, range.upperBound > active.lowerBound else {
-                result.append(.block(index))
-                continue
-            }
-
-            if range.lowerBound >= active.upperBound {
-                if !inserted {
-                    result.append(.editor)
-                    inserted = true
-                }
-                result.append(.block(index))
-                continue
-            }
-
-            if range.lowerBound < active.lowerBound {
-                result.append(.fragment(index, .before, range.lowerBound..<active.lowerBound))
-            }
-            if !inserted {
-                result.append(.editor)
-                inserted = true
-            }
-            if range.upperBound > active.upperBound {
-                result.append(.fragment(index, .after, active.upperBound..<range.upperBound))
-            }
-        }
-        result.append(.footnotes)
-        if !inserted { result.append(.editor) }
-        items = result
-        showsTail = inserted
     }
 }

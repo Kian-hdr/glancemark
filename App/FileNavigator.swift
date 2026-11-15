@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 struct DocumentNavigatorItem: Identifiable, Sendable {
     let url: URL
@@ -26,74 +25,8 @@ struct DocumentNavigatorItem: Identifiable, Sendable {
         }
     }
 
-    static func load(_ root: URL) -> [Self] {
-        var remaining = 1_500
-        func scan(_ directory: URL, depth: Int) -> [Self] {
-            guard depth < 8, remaining > 0, let entries = try? contents(of: directory) else { return [] }
-            var result: [Self] = []
-            for entry in entries {
-                guard remaining > 0 else { break }
-                remaining -= 1
-                let children = entry.isFolder ? scan(entry.url, depth: depth + 1) : nil
-                result.append(Self(url: entry.url, children: children))
-            }
-            return result
-        }
-        return scan(root, depth: 0)
-    }
-
     static func isMarkdown(_ url: URL) -> Bool {
         ["md", "markdown"].contains(url.pathExtension.lowercased())
     }
 
-    func matching(_ filter: String) -> Self? {
-        if name.localizedCaseInsensitiveContains(filter) { return self }
-        guard let children else { return nil }
-        let retained = children.compactMap { $0.matching(filter) }
-        return retained.isEmpty ? nil : Self(url: url, children: retained)
-    }
-
-    var files: [Self] { children?.flatMap(\.files) ?? [self] }
-}
-
-struct DocumentFileNavigator: View {
-    let items: [DocumentNavigatorItem]
-    let selected: URL?
-    let open: (URL) -> Void
-    @State private var filter = ""
-
-    private var filtered: [DocumentNavigatorItem] {
-        let query = filter.trimmingCharacters(in: .whitespacesAndNewlines)
-        return query.isEmpty ? items : items.compactMap { $0.matching(query) }.flatMap(\.files)
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            List {
-                OutlineGroup(filtered, children: \.children) { item in
-                    if item.isFolder {
-                        Label(item.name, systemImage: "folder")
-                            .lineLimit(1)
-                    } else {
-                        Button { open(item.url) } label: {
-                            Label(item.name, systemImage: "doc.text")
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.plain)
-                        .listRowBackground(item.url == selected ? Color.accentColor.opacity(0.16) : Color.clear)
-                        .accessibilityAddTraits(item.url == selected ? [.isSelected] : [])
-                    }
-                }
-            }
-            .listStyle(.sidebar)
-            Divider()
-            TextField("Filter files", text: $filter)
-                .textFieldStyle(.roundedBorder)
-                .padding(8)
-        }
-        .accessibilityLabel("Files")
-        .frame(width: 225)
-        .background(.regularMaterial)
-    }
 }

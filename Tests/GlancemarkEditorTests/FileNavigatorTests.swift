@@ -17,10 +17,6 @@ final class FileNavigatorTests: XCTestCase {
         XCTAssertEqual(direct.map(\.name), ["Docs", "README.md"])
         XCTAssertEqual(direct[0].children?.count, 0)
         XCTAssertEqual(try DocumentNavigatorItem.contents(of: direct[0].url).map(\.name), ["Guide.markdown"])
-        let items = DocumentNavigatorItem.load(root)
-        XCTAssertEqual(items.map(\.name), ["Docs", "README.md"])
-        XCTAssertEqual(items.flatMap(\.files).map(\.name), ["Guide.markdown", "README.md"])
-        XCTAssertEqual(items.compactMap { $0.matching("guide") }.flatMap(\.files).map(\.name), ["Guide.markdown"])
     }
 
     func testBreadcrumbsKeepTheRootForNestedDocuments() {

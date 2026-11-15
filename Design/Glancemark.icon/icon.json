@@ -1,7 +1,18 @@
 {
   "fill-specializations": [
-    { "value": { "automatic-gradient": "srgb:0.10,0.35,0.76,1" } },
-    { "appearance": "dark", "value": { "automatic-gradient": "srgb:0.06,0.19,0.44,1" } }
+    {
+      "value": {
+        "automatic-gradient": "srgb:0.09,0.31,0.69,1"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": "system-dark"
+    },
+    {
+      "appearance": "tinted",
+      "value": "none"
+    }
   ],
   "groups": [
     {
@@ -12,15 +23,48 @@
           "image-name": "Fold.svg",
           "glass": false,
           "fill-specializations": [
-            { "value": { "solid": "srgb:0.52,0.69,0.91,1" } },
-            { "appearance": "dark", "value": { "solid": "srgb:0.32,0.49,0.77,1" } }
+            {
+              "value": {
+                "solid": "srgb:0.52,0.69,0.91,1"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.23,0.37,0.62,1"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "gray:0.50,1"
+              }
+            }
           ]
         },
         {
           "name": "Markdown heading",
           "image-name": "Heading.svg",
           "glass": false,
-          "fill": { "solid": "srgb:0.06,0.23,0.55,1" }
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.06,0.23,0.55,1"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.06,0.16,0.36,1"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "gray:0.12,1"
+              }
+            }
+          ]
         }
       ]
     },
@@ -32,13 +76,42 @@
           "image-name": "Page.svg",
           "glass": true,
           "fill-specializations": [
-            { "value": { "solid": "srgb:0.94,0.97,1,1" } },
-            { "appearance": "dark", "value": { "solid": "srgb:0.72,0.82,1,1" } }
+            {
+              "value": {
+                "solid": "srgb:0.94,0.97,1,1"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.74,0.82,0.97,1"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "gray:0.94,1"
+              }
+            }
           ]
         }
       ],
-      "shadow": { "kind": "neutral", "opacity": 0.35 }
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency-specializations": [
+        {
+          "appearance": "tinted",
+          "value": {
+            "enabled": true,
+            "value": 0.55
+          }
+        }
+      ]
     }
   ],
-  "supported-platforms": { "squares": "shared" }
+  "supported-platforms": {
+    "squares": "shared"
+  }
 }

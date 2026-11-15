@@ -33,6 +33,14 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>GlancemarkAppearanceGroup</key>
 	<string>$(GLANCEMARK_APPEARANCE_GROUP)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>GlancemarkDefaultStartAtLogin</key>
+	<string>$(GLANCEMARK_DEFAULT_START_AT_LOGIN)</string>
+	<key>LSUIElement</key>
+	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSPrincipalClass</key>
