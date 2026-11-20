@@ -16,10 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.3/Glancemark_0.1.3_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
+  <a href="https://github.com/Kian-hdr/glancemark/releases/download/v0.1.5/Glancemark_0.1.5_arm64.dmg"><img src="docs/assets/downloads/Download_macOS_Single.svg" width="240" height="48" alt="Download for macOS"></a>
 </p>
 
-Glancemark 0.1.3 requires Apple Silicon and macOS 14 Sonoma or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.3)
+Glancemark 0.1.5 requires Apple Silicon and macOS 14 Sonoma or later. Open the signed, notarized DMG and drag Glancemark to Applications. [Release notes and checksum](https://github.com/Kian-hdr/glancemark/releases/tag/v0.1.5)
 
 To install with [Homebrew](https://github.com/Kian-hdr/homebrew-glancemark):
 
@@ -31,7 +31,7 @@ brew install --cask Kian-hdr/glancemark/glancemark
 
 ## Read and edit Markdown
 
-- Open Markdown files directly in the rendered editor. Select **Source** to see and edit the original Markdown.
+- Open Markdown files in a continuous editor with live formatting and selection across paragraphs. Type **/** on a blank line to choose a heading, list, or link. Press **Return** for a new paragraph or list item. Press it on an empty list item to exit the list. Use **Shift-Return** for a line break. Click task checkboxes to toggle them, and Command-click a link or choose **Open Link** from its context menu. Use **Preview** for the full rendering and **Source** to see and edit the original Markdown.
 - Open related notes in tabs. Drag a tab out to open a separate window, or drag it back to rejoin.
 - Click a folder in the path to browse that level, or choose **Show in Finder** from the document menu. The filename shows the current document. The path, formatting tools, and Source share one toolbar.
 - Open Glancemark once after installing it so macOS can register the bundled preview. Then select a Markdown file in Finder and press Space. Use the outline menu to jump between headings. You can keep your current default editor.
@@ -47,9 +47,9 @@ brew install --cask Kian-hdr/glancemark/glancemark
 
 ![Mermaid diagram and equation in Finder Quick Look](docs/assets/screenshots/02_Quick_Look_Diagrams.jpg)
 
-![Field notes and a table in the tabbed Markdown editor](docs/assets/screenshots/03_Editor_Field_Notes.jpg)
+![Rich preview of field notes and a table](docs/assets/screenshots/03_Editor_Field_Notes.jpg)
 
-![Mermaid diagram and equation in the Markdown editor](docs/assets/screenshots/04_Editor_Diagrams.jpg)
+![Rich preview of a Mermaid diagram and equation](docs/assets/screenshots/04_Editor_Diagrams.jpg)
 
 ## Build from source
 

@@ -105,19 +105,8 @@ public struct RepositoryLinks {
     }
 
     public func resolve(_ reference: String) -> Destination? {
-        guard !reference.hasPrefix("//"), !reference.contains("\\"),
-              let parts = URLComponents(string: reference), parts.user == nil, parts.password == nil else {
-            return nil
-        }
-        if let scheme = parts.scheme?.lowercased() {
-            guard ["https", "http", "mailto"].contains(scheme), let url = parts.url,
-                  scheme == "mailto" || parts.host?.isEmpty == false else { return nil }
-            return .web(url)
-        }
-        guard parts.host == nil else { return nil }
-        if parts.path.isEmpty {
-            return parts.fragment.map(Destination.fragment)
-        }
+        guard let parts = Self.referenceComponents(reference) else { return nil }
+        if parts.scheme != nil || parts.path.isEmpty { return Self.nonFileDestination(parts) }
 
         let base: URL
         let path: String
@@ -130,6 +119,27 @@ public struct RepositoryLinks {
             path = parts.path
         }
         return resolvePath(path, relativeTo: base, within: allowedFolder, fragment: parts.fragment)
+    }
+
+    public static func resolveNonFile(_ reference: String) -> Destination? {
+        referenceComponents(reference).flatMap(nonFileDestination)
+    }
+
+    private static func referenceComponents(_ reference: String) -> URLComponents? {
+        guard !reference.hasPrefix("//"), !reference.contains("\\"),
+              let parts = URLComponents(string: reference), parts.user == nil, parts.password == nil,
+              parts.scheme != nil || parts.host == nil else { return nil }
+        return parts
+    }
+
+    private static func nonFileDestination(_ parts: URLComponents) -> Destination? {
+        if let scheme = parts.scheme?.lowercased() {
+            guard ["https", "http", "mailto"].contains(scheme), let url = parts.url,
+                  scheme == "mailto" || parts.host?.isEmpty == false else { return nil }
+            return .web(url)
+        }
+        guard parts.path.isEmpty else { return nil }
+        return parts.fragment.map(Destination.fragment)
     }
 
     private func resolvePath(_ path: String, relativeTo base: URL, within boundary: URL,

@@ -5,9 +5,8 @@ struct DocumentToolbar: View {
     let file: URL?
     let hasCustomFolder: Bool
     let canPrepareFinderImages: Bool
-    let canFormat: Bool
 
-    @Binding var showSource: Bool
+    @Binding var mode: DocumentMode
     @Binding var showOutline: Bool
 
     let openDocument: (URL, URL) -> Void
@@ -52,18 +51,30 @@ struct DocumentToolbar: View {
             .fixedSize(horizontal: !compact, vertical: false)
             documentOptions
             Spacer(minLength: 4)
-            if !showSource {
+            if mode == .edit {
                 if compact { formattingMenu }
                 else { formattingBar }
                 Divider().frame(height: 14)
             }
-            Toggle(isOn: $showSource) {
-                Label("Source", systemImage: "chevron.left.forwardslash.chevron.right")
-            }
-            .toggleStyle(.button)
-            .fixedSize()
-            .help("Show or hide Markdown source")
+            modeButton(.preview, title: "Preview", symbol: "book", compact: compact,
+                       help: "Show the rendered Markdown preview")
+            modeButton(.source, title: "Source", symbol: "chevron.left.forwardslash.chevron.right", compact: compact,
+                       help: "Show the original Markdown")
         }
+    }
+
+    private func modeButton(_ target: DocumentMode, title: String, symbol: String, compact: Bool,
+                            help: String) -> some View {
+        Toggle(isOn: Binding(get: { mode == target }, set: { mode = $0 ? target : .edit })) {
+            if compact {
+                Label(title, systemImage: symbol).labelStyle(.iconOnly)
+            } else {
+                Label(title, systemImage: symbol)
+            }
+        }
+        .toggleStyle(.button)
+        .fixedSize()
+        .help(help)
     }
 
     private var documentOptions: some View {
@@ -76,7 +87,13 @@ struct DocumentToolbar: View {
                 Button("Use Document Folder", action: useDocumentFolder)
             }
             Divider()
-            Toggle("Show Outline", isOn: $showOutline)
+            Toggle("Show Outline", isOn: Binding(
+                get: { showOutline && mode == .preview },
+                set: {
+                    showOutline = $0
+                    if $0 { mode = .preview }
+                }
+            ))
             Button("Prepare Images for Finder", action: prepareFinderImages)
                 .disabled(!canPrepareFinderImages)
         } label: {
@@ -127,7 +144,6 @@ struct DocumentToolbar: View {
             .accessibilityLabel("List")
         }
         .buttonStyle(.borderless)
-        .disabled(!canFormat)
         .fixedSize()
         .accessibilityLabel("Formatting")
     }
@@ -146,7 +162,6 @@ struct DocumentToolbar: View {
         }
         .menuStyle(.borderlessButton)
         .help("Formatting")
-        .disabled(!canFormat)
         .fixedSize()
     }
 

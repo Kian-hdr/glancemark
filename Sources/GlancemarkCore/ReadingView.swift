@@ -19,15 +19,11 @@ public struct ReadingView: View {
     private let showOutline: Bool
     private let initialFragment: String?
     private let useHostSurface: Bool
-    private let activeEditRange: Range<Int>?
-    private let onEditBlock: ((Range<Int>) -> Void)?
-    private let activeEditor: (() -> AnyView)?
     private let onUnavailableLocal: (() -> Void)?
 
     public init(snapshot: MarkdownSnapshot, links: RepositoryLinks? = nil,
                 width: Double = 1_200, showOutline: Bool = false, initialFragment: String? = nil,
-                useHostSurface: Bool = false, activeEditRange: Range<Int>? = nil,
-                onEditBlock: ((Range<Int>) -> Void)? = nil, activeEditor: (() -> AnyView)? = nil,
+                useHostSurface: Bool = false,
                 onUnavailableLocal: (() -> Void)? = nil,
                 openLocal: @escaping (URL, String?) -> Void = { _, _ in }) {
         self.snapshot = snapshot
@@ -37,9 +33,6 @@ public struct ReadingView: View {
         self.showOutline = showOutline
         self.initialFragment = initialFragment
         self.useHostSurface = useHostSurface
-        self.activeEditRange = activeEditRange
-        self.onEditBlock = onEditBlock
-        self.activeEditor = activeEditor
         self.onUnavailableLocal = onUnavailableLocal
         self.openLocal = openLocal
         let outline = HeadingIndex(snapshot: snapshot).entries
@@ -60,14 +53,10 @@ public struct ReadingView: View {
                         }
                         Divider()
                     }
-                    if let onEditBlock {
-                        editableDocument(onEditBlock, using: proxy)
-                    } else {
-                        ForEach(documentGroups.indices, id: \.self) { index in
-                            groupView(documentGroups[index], using: proxy).id(DocumentBlockTarget(index: index))
-                        }
-                        if !footnotes.notes.isEmpty { footnoteSection }
+                    ForEach(documentGroups.indices, id: \.self) { index in
+                        groupView(documentGroups[index], using: proxy).id(DocumentBlockTarget(index: index))
                     }
+                    if !footnotes.notes.isEmpty { footnoteSection }
                 }
                 .font(.system(size: appearance.value.preset.textSize))
                 .lineSpacing(3)
@@ -222,71 +211,6 @@ public struct ReadingView: View {
             Button("Go to footnote \(note.number)") {
                 proxy.scrollTo(NoteTarget(id: note.references[0].noteID), anchor: .top)
             }
-        }
-    }
-
-    @ViewBuilder
-    private func editableDocument(_ beginEdit: @escaping (Range<Int>) -> Void, using proxy: ScrollViewProxy) -> some View {
-        let groups = documentGroups
-        let layout = EditableReadingLayout(ranges: groups.map(\.range),
-                                           active: activeEditor == nil ? nil : activeEditRange,
-                                           byteCount: snapshot.byteCount)
-        ForEach(layout.items) { item in
-            switch item {
-            case let .block(index):
-                let group = groups[index]
-                editTarget(group.range, beginEdit: beginEdit) {
-                    groupView(group, using: proxy)
-                }
-                .id(DocumentBlockTarget(index: index))
-            case let .fragment(_, _, range):
-                editTarget(range, beginEdit: beginEdit) {
-                    if let source = snapshot.source(in: range) {
-                        let reader = ReadingView(snapshot: MarkdownSource(text: source).parse(), links: links, openLocal: openLocal)
-                        VStack(alignment: .leading, spacing: 15) {
-                            reader.blocks(Array(reader.snapshot.document.children))
-                        }
-                    }
-                }
-            case .footnotes:
-                if !footnotes.notes.isEmpty { footnoteSection }
-            case .editor:
-                VStack(alignment: .leading, spacing: 12) {
-                    activeEditor?()
-                    if let activeEditRange {
-                        let views = ReadingBlockGroup.previews(groups, in: activeEditRange, snapshot: snapshot).flatMap(render)
-                        ForEach(views.indices, id: \.self) { views[$0] }
-                    }
-                }
-            }
-        }
-        if layout.showsTail {
-            Button {
-                beginEdit(snapshot.byteCount..<snapshot.byteCount)
-            } label: {
-                Label("Add text", systemImage: "plus")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add text at the end of the document")
-        }
-    }
-
-    @ViewBuilder
-    private func editTarget<Content: View>(_ range: Range<Int>?, beginEdit: @escaping (Range<Int>) -> Void,
-                                          @ViewBuilder content: () -> Content) -> some View {
-        if let range {
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .textSelection(.disabled)
-                .gesture(TapGesture().onEnded { beginEdit(range) })
-                .accessibilityAction(named: Text("Edit block")) { beginEdit(range) }
-        } else {
-            content()
         }
     }
 

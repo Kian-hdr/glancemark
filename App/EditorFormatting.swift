@@ -99,6 +99,59 @@ enum MarkdownFormatting {
                                          length: (target as NSString).length))
     }
 
+    private static let listPrefix = try! NSRegularExpression(
+        pattern: #"^([ \t]*)([-+*]|[0-9]{1,9}[.)])(?:[ \t]+(\[[ xX]\](?=[ \t]|$))?[ \t]*|$)"#
+    )
+
+    static func listReturn(in text: String, at caret: Int, hasListMarker: (Int) -> Bool) -> Change? {
+        let source = text as NSString
+        var start = 0, contentsEnd = 0
+        source.getLineStart(&start, end: nil, contentsEnd: &contentsEnd,
+                            for: NSRange(location: caret, length: 0))
+        let line = source.substring(with: NSRange(location: start, length: contentsEnd - start)) as NSString
+        guard let match = listPrefix.firstMatch(in: line as String, range: NSRange(location: 0, length: line.length)),
+              caret >= start + NSMaxRange(match.range), caret <= contentsEnd,
+              hasListMarker(start + match.range(at: 1).length) else { return nil }
+
+        let item = line.substring(from: NSMaxRange(match.range)).trimmingCharacters(in: .whitespaces)
+        if item.isEmpty {
+            return Change(range: NSRange(location: start, length: line.length), text: "",
+                          selection: NSRange(location: start, length: 0))
+        }
+
+        let indent = line.substring(with: match.range(at: 1))
+        let marker = line.substring(with: match.range(at: 2))
+        let nextMarker: String
+        if let number = Int(marker.dropLast()), let suffix = marker.last {
+            nextMarker = "\(min(number + 1, 999_999_999))\(suffix)"
+        } else {
+            nextMarker = marker
+        }
+        let checkbox = match.range(at: 3).location == NSNotFound ? "" : "[ ] "
+        let lineEnding = newline(in: source, at: caret)
+        let insertion = lineEnding + indent + nextMarker + " " + checkbox
+        return Change(range: NSRange(location: caret, length: 0), text: insertion,
+                      selection: NSRange(location: caret + (insertion as NSString).length, length: 0))
+    }
+
+    static func paragraphReturn(in text: String, at caret: Int) -> Change {
+        let insertion = String(repeating: newline(in: text as NSString, at: caret), count: 2)
+        return Change(range: NSRange(location: caret, length: 0), text: insertion,
+                      selection: NSRange(location: caret + (insertion as NSString).length, length: 0))
+    }
+
+    private static func newline(in source: NSString, at caret: Int) -> String {
+        var end = 0, contentsEnd = 0
+        source.getLineStart(nil, end: &end, contentsEnd: &contentsEnd, for: NSRange(location: caret, length: 0))
+        if end > contentsEnd {
+            return source.substring(with: NSRange(location: contentsEnd, length: end - contentsEnd))
+        }
+        let firstBreak = source.rangeOfCharacter(from: .newlines)
+        guard firstBreak.location != NSNotFound else { return "\n" }
+        return source.substring(from: firstBreak.location).hasPrefix("\r\n") ? "\r\n"
+            : source.substring(with: firstBreak)
+    }
+
     private static let indentation = try? NSRegularExpression(pattern: #"^[ \t]*"#)
     private static let linePrefix = try? NSRegularExpression(
         pattern: #"^(?:#{1,6}(?:[ \t]+|$)|(?:[-+*]|[0-9]{1,9}[.)])[ \t]+(?:\[[ xX]\](?:[ \t]+|$))?)"#

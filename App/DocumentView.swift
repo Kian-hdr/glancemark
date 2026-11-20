@@ -2,6 +2,10 @@ import AppKit
 import GlancemarkCore
 import SwiftUI
 
+enum DocumentMode {
+    case edit, preview, source
+}
+
 struct DocumentView: View {
     @ObservedObject var content: DocumentContent
     var undo: UndoManager?
@@ -11,13 +15,8 @@ struct DocumentView: View {
     var edit: (String) -> Void
 
     @StateObject private var formatting = EditorFormatting()
-    @State private var showSource = false
-    @State private var activeBlock: InlineDocumentBlock?
+    @State private var mode: DocumentMode = .edit
     @State private var showOutline = false
-
-    private var activeRange: Range<Int>? { activeBlock?.range }
-    @State private var activeEditorID = UUID()
-    @State private var activeUndo = UndoManager()
     @State private var preparingFinderImages = false
     @State private var finderImageResult: String?
     @State private var showFinderImageResult = false
@@ -27,7 +26,7 @@ struct DocumentView: View {
             DocumentToolbar(path: breadcrumbs, file: content.fileURL,
                             hasCustomFolder: content.navigatorRoot != nil || content.breadcrumbRoot != nil,
                             canPrepareFinderImages: content.fileURL != nil && !preparingFinderImages,
-                            canFormat: activeRange != nil, showSource: $showSource, showOutline: $showOutline,
+                            mode: $mode, showOutline: $showOutline,
                             openDocument: { url, root in open(url, fragment: nil, breadcrumbRoot: root) },
                             revealInFinder: revealInFinder, chooseFolder: chooseFolder,
                             useDocumentFolder: useDocumentFolder, prepareFinderImages: prepareFinderImages,
@@ -45,12 +44,9 @@ struct DocumentView: View {
             }
             documentSurface
         }
-        .onChange(of: content.fragment) { _, _ in
-            showSource = false
-            activeBlock = nil
+        .onChange(of: content.fragment, initial: true) { _, fragment in
+            if fragment != nil { mode = .preview }
         }
-        .onChange(of: showSource) { _, _ in activeBlock = nil }
-        .onExitCommand { activeBlock = nil }
         .alert("Finder Images", isPresented: $showFinderImageResult) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -60,26 +56,16 @@ struct DocumentView: View {
 
     private var documentSurface: some View {
         ZStack {
-            SourceEditor(text: content.source.text, formatted: false, active: showSource, undo: undo, edit: edit)
-                .opacity(showSource ? 1 : 0)
-                .allowsHitTesting(showSource)
-                .accessibilityHidden(!showSource)
-            if !showSource {
+            SourceEditor(text: content.source.text, formatted: mode != .source, active: mode != .preview,
+                         undo: undo, formatting: formatting, focusOnCreation: content.fragment == nil,
+                         openLink: followEditorLink, edit: edit)
+                .opacity(mode == .preview ? 0 : 1)
+                .allowsHitTesting(mode != .preview)
+                .accessibilityHidden(mode == .preview)
+            if mode == .preview {
                 ReadingView(snapshot: content.source.parse(), links: resolver, showOutline: showOutline,
-                            initialFragment: content.fragment, activeEditRange: activeRange,
-                            onEditBlock: beginEditing, activeEditor: { AnyView(inlineEditor) }, openLocal: open)
+                            initialFragment: content.fragment, openLocal: open)
             }
-        }
-        .onAppear {
-            if content.source.text.isEmpty { beginEditing(0..<0) }
-        }
-    }
-
-    @ViewBuilder private var inlineEditor: some View {
-        if let block = activeBlock, let text = block.text(in: content.source.text) {
-            SourceEditor(text: text, formatted: true, active: true, undo: activeUndo,
-                         formatting: formatting, focusOnCreation: true, inline: true, edit: replaceActiveBlock)
-                .id(activeEditorID)
         }
     }
 
@@ -141,18 +127,21 @@ struct DocumentView: View {
         }
     }
 
-    private func beginEditing(_ range: Range<Int>) {
-        let block = InlineDocumentBlock(range: range)
-        guard activeRange != range, block.text(in: content.source.text) != nil else { return }
-        activeUndo = UndoManager()
-        activeEditorID = UUID()
-        activeBlock = block
-    }
-
-    private func replaceActiveBlock(_ text: String) {
-        guard var block = activeBlock, let result = block.replace(in: content.source.text, with: text) else { return }
-        activeBlock = block
-        edit(result)
+    private func followEditorLink(_ reference: String, editor: MarkdownTextView) -> Bool {
+        let destination = resolver.map { $0.resolve(reference) } ?? RepositoryLinks.resolveNonFile(reference)
+        switch destination {
+        case let .web(url):
+            return NSWorkspace.shared.open(url)
+        case let .local(url, fragment):
+            open(url, fragment: fragment)
+            return true
+        case let .fragment(fragment):
+            guard let range = LiveMarkdownStyle(editor.string).headingRange(for: fragment) else { return false }
+            editor.scrollRangeToVisible(range)
+            return true
+        case nil:
+            return false
+        }
     }
 
     private func open(_ url: URL, fragment: String?) {
